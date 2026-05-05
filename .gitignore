@@ -14,6 +14,10 @@ pred_D.csv
 submission.csv
 figures/
 
+# Data files
+train_series_*.csv
+test_serie*.csv
+
 # Jupyter
 .ipynb_checkpoints/
 
