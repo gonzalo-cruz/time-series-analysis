@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# Generated outputs
+pred_A.csv
+pred_B.csv
+pred_C.csv
+pred_D.csv
+submission.csv
+figures/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
