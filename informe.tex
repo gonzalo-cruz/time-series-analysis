@@ -21,13 +21,13 @@
     urlcolor=blue
 }
 
-\title{\textbf{Práctica Final:\\Análisis y Predicción de Series Temporales}\\[0.5em]
-\large Competición Kaggle -- Universidad Rey Juan Carlos (URJC)}
-\author{Gonzalo C. Gómez}
+\title{\textbf{Práctica Final:\\Análisis y Predicción de Series Temporales}}
+\author{Gonzalo Cruz Gómez}
 \date{Mayo 2026}
 
 \begin{document}
 \maketitle
+\setcounter{tocdepth}{1}
 \tableofcontents
 \newpage
 
@@ -56,7 +56,7 @@ D & Serie mensual       & Mensual       & 132  & 1980--1990 & 10 \\
 \end{tabular}
 \end{table}
 
-\section{Serie A -- Precios Bursátiles Diarios}
+\section{Serie A - Precios Bursátiles Diarios}
 
 \subsection{Análisis exploratorio}
 
@@ -92,7 +92,7 @@ Con $d=0$ y $D=1$, la diferenciación estacional estabiliza la serie sin perder 
 
 \begin{table}[H]
 \centering
-\caption{Selección SARIMA -- Serie A (validación: últimas 20 obs.)}
+\caption{Selección SARIMA - Serie A (validación: últimas 20 obs.)}
 \begin{tabular}{lcc}
 \toprule
 \textbf{Modelo} & \textbf{RMSE (val.)} & \textbf{AIC} \\
@@ -120,11 +120,11 @@ SARIMA$(0,0,2)(1,0,0)_5$           & 6.26 & 11746.16 \\
     \caption{Serie A: predicciones SARIMA$(2,0,1)(1,1,1)_5$ para los 10 días de test}
 \end{figure}
 
-\section{Serie B -- Nacimientos Diarios}
+\section{Serie B - Nacimientos Diarios}
 
 \subsection{Análisis exploratorio}
 
-La serie B contiene 3287 observaciones diarias de nacimientos (1994--2002). Tiene dos estacionalidades claramente visibles: una semanal muy marcada (pocos nacimientos en fin de semana, las cesáreas programadas se concentran entre semana) y una anual (pico en agosto-septiembre, mínimo en enero, diferencia de unos 1000 nacimientos/día).
+La serie B contiene 3287 observaciones diarias de nacimientos (1994-2002). Tiene dos estacionalidades claramente visibles: una semanal muy marcada (pocos nacimientos en fin de semana, las cesáreas programadas se concentran entre semana) y una anual (pico en agosto-septiembre, mínimo en enero, diferencia de unos 1000 nacimientos/día).
 
 \begin{figure}[H]
     \centering
@@ -140,23 +140,21 @@ La serie B contiene 3287 observaciones diarias de nacimientos (1994--2002). Tien
 
 \subsection{Modelo: SARIMA con términos de Fourier}
 
-\subsubsection*{Motivación del enfoque}
-
 La serie tiene dos estacionalidades distintas. SARIMA con $m=7$ captura directamente la componente semanal mediante diferenciación estacional y los términos AR/MA estacionales. Sin embargo, la componente anual no puede modelarse con un segundo periodo estacional en SARIMA estándar.
 
 Para resolver esto se añaden como regresores externos \textbf{términos de Fourier anuales}: pares seno/coseno de la forma
 \[
 \sin\!\left(\frac{2\pi k\, t}{365.25}\right), \quad \cos\!\left(\frac{2\pi k\, t}{365.25}\right), \quad k = 1, \ldots, K
 \]
-donde $t$ es el día del año (1--365). Con $K=5$ se tienen 10 regresores que representan los primeros cinco armónicos de la variación anual. La ventaja de este enfoque es que estos regressores se calculan únicamente a partir del índice de fecha, sin usar los valores de la serie, así que no hay fuga de información al construirlos para 2003. El modelo SARIMAX con $m=7$ y Fourier $K=5$ separa entonces las dos fuentes de variación: el componente estocástico semanal (manejado por el SARIMA) y el patrón anual determinista (manejado por el Fourier).
+donde $t$ es el día del año (1--365). Con $K=5$ se tienen 10 regresores que representan los primeros cinco armónicos de la variación anual. La ventaja de este enfoque es que estos regresores se calculan únicamente a partir del índice de fecha, sin usar los valores de la serie, así que no hay fuga de información al construirlos para 2003. El modelo SARIMAX con $m=7$ y Fourier $K=5$ separa entonces las dos fuentes de variación: el componente estocástico semanal (manejado por el SARIMA) y el patrón anual determinista (manejado por el Fourier).
 
 \subsubsection*{Selección del modelo}
 
-Se realizó un grid search con $m=7$ y $K=5$, entrenando con 1994--2001 y validando en 2002. El mejor modelo fue \textbf{SARIMA$(2,0,1)(1,1,1)_7$} con Fourier $K=5$ (RMSE$=710$ sobre el año 2002, entrenado con todos los años disponibles).
+Se realizó un grid search con $m=7$ y $K=5$, entrenando con 1994-2001 y validando en 2002. El mejor modelo fue \textbf{SARIMA$(2,0,1)(1,1,1)_7$} con Fourier $K=5$ (RMSE$=710$ sobre el año 2002, entrenado con todos los años disponibles).
 
 \begin{table}[H]
 \centering
-\caption{Top modelos -- Serie B (validación: año 2002)}
+\caption{Top modelos - Serie B (validación: año 2002)}
 \begin{tabular}{lccc}
 \toprule
 \textbf{Modelo} & \textbf{K} & \textbf{Ventana} & \textbf{RMSE (val.)} \\
@@ -173,7 +171,7 @@ SARIMA$(1,0,2)(1,1,1)_7$          & 5 & all & 712.63 \\
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/B_residuos.png}
-    \caption{Análisis de residuos -- SARIMA$(2,0,1)(1,1,1)_7$ + Fourier $K=5$ -- Serie B}
+    \caption{Análisis de residuos - SARIMA$(2,0,1)(1,1,1)_7$ + Fourier $K=5$ -- Serie B}
 \end{figure}
 
 \subsection{Predicciones}
@@ -184,7 +182,7 @@ SARIMA$(1,0,2)(1,1,1)_7$          & 5 & all & 712.63 \\
     \caption{Serie B: predicciones para el año 2003 (SARIMA + Fourier $K=5$)}
 \end{figure}
 
-\section{Serie C -- Temperatura Global Mensual}
+\section{Serie C - Temperatura Global Mensual}
 
 \subsection{Análisis exploratorio}
 
@@ -214,7 +212,7 @@ El mejor modelo fue \textbf{SARIMA$(1,0,0)(0,1,1)_{12}$} con un \textbf{regresor
 
 \begin{table}[H]
 \centering
-\caption{Top modelos -- Serie C (validación: 2023--2024)}
+\caption{Top modelos - Serie C (validación: 2023--2024)}
 \begin{tabular}{lcc}
 \toprule
 \textbf{Modelo} & \textbf{Ventana} & \textbf{RMSE (val.)} \\
@@ -231,7 +229,7 @@ SARIMA$(0,0,1)(0,1,1)_{12}$                       & 40 años & 0.2895 \\
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/C_residuos.png}
-    \caption{Análisis de residuos -- SARIMA$(1,0,0)(0,1,1)_{12}$ + tendencia -- Serie C}
+    \caption{Análisis de residuos - SARIMA$(1,0,0)(0,1,1)_{12}$ + tendencia -- Serie C}
 \end{figure}
 
 \subsection{Predicciones}
@@ -242,7 +240,7 @@ SARIMA$(0,0,1)(0,1,1)_{12}$                       & 40 años & 0.2895 \\
     \caption{Serie C: predicciones SARIMA$(1,0,0)(0,1,1)_{12}$ para 2025}
 \end{figure}
 
-\section{Serie D -- Serie Mensual}
+\section{Serie D - Serie Mensual}
 
 \subsection{Análisis exploratorio}
 
@@ -270,7 +268,7 @@ El mejor modelo en validación (año 1990) fue \textbf{SARIMA$(0,0,0)(1,0,0)_{12
 
 \begin{table}[H]
 \centering
-\caption{Top modelos -- Serie D (validación: año 1990)}
+\caption{Top modelos - Serie D (validación: año 1990)}
 \begin{tabular}{lcc}
 \toprule
 \textbf{Modelo} & \textbf{RMSE (val.)} & \textbf{AIC} \\
@@ -287,7 +285,7 @@ SARIMA$(0,0,0)(0,1,1)_{12}$          & 193.98 & 1283.23 \\
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/D_residuos.png}
-    \caption{Análisis de residuos -- SARIMA$(0,0,0)(1,0,0)_{12}$ -- Serie D}
+    \caption{Análisis de residuos - SARIMA$(0,0,0)(1,0,0)_{12}$ - Serie D}
 \end{figure}
 
 \subsection{Predicciones}
@@ -306,7 +304,7 @@ Además del análisis principal, exploré algunas cuestiones adicionales que apa
 
 \subsection{Serie A -- Heterocedasticidad y log-retornos}
 
-La serie de precios es heterocedástica: cuando el precio es alto, también lo son las oscilaciones diarias. Aplicando el test de Levene \cite{levene1960} dividiendo la serie en 4 bloques, el p-valor es prácticamente cero.
+La serie de precios es heterocedástica: cuando el precio es alto, también lo son las oscilaciones diarias. Aplicando el test de Levene dividiendo la serie en 4 bloques, el p-valor es prácticamente cero.
 
 En finanzas lo habitual es trabajar con \textbf{log-retornos} ($r_t = \log P_t - \log P_{t-1}$), que son estacionarios y mucho más homocedásticos. Ajusté un ARIMA sobre los retornos y luego revertí la transformación para obtener precios. El modelo resultante fue ARIMA$(0,0,0)$ (ruido blanco), coherente con la hipótesis de eficiencia del mercado.
 
@@ -322,19 +320,10 @@ En finanzas lo habitual es trabajar con \textbf{log-retornos} ($r_t = \log P_t -
     \caption{Arriba: log-retornos (rachas de alta y baja volatilidad). Abajo: predicción en precios obtenida revirtiendo la transformación logarítmica.}
 \end{figure}
 
-Lo que quedaría por explorar es modelar la volatilidad con un GARCH$(1,1)$ \cite{engle1982,bollerslev1986}, que mejoraría los intervalos de predicción aunque no cambie la predicción puntual.
 
-\subsection{Serie B -- Exploración con Gradient Boosting}
+\subsection{Serie D - Transformación Box-Cox}
 
-Como exploración adicional, probé un modelo \textbf{HistGradientBoosting} (scikit-learn) para la serie B. Las features usadas fueron: día de la semana, mes, día del año, índice de año, términos de Fourier semanales y anuales, y tres lags anuales (lag$_{364}$, lag$_{365}$, lag$_{366}$, el mismo día del año anterior $\pm 1$ día).
-
-La ventaja de este enfoque es que el lag del año anterior aporta el nivel base de cada día directamente, y el árbol de gradiente puede capturar interacciones no lineales entre el día de la semana y el mes sin necesitar diferenciación. En validación sobre el año 2002, el RMSE fue de 514, frente al RMSE de 710 del SARIMA+Fourier.
-
-No se usó para la predicción final porque el objetivo de esta práctica era explorar los modelos SARIMA/SARIMAX. De todas formas el resultado apunta a que para series con dependencias de nivel interanuales, los modelos basados en árboles con lags anuales pueden ser una alternativa interesante.
-
-\subsection{Serie D -- Transformación Box-Cox}
-
-La transformación Box-Cox \cite{boxcox1964} elige automáticamente el exponente que mejor estabiliza la varianza. La serie D crece bastante así que pensé que podría haber heterocedasticidad, pero el test de Levene dio $p=0.31$: la varianza ya era constante. El lambda óptimo resultó $\lambda=0.35$, entre logaritmo y raíz cuadrada.
+La transformación Box-Cox elige automáticamente el exponente que mejor estabiliza la varianza. La serie D crece bastante así que pensé que podría haber heterocedasticidad, pero el test de Levene dio $p=0.31$: la varianza ya era constante. El lambda óptimo resultó $\lambda=0.35$, entre logaritmo y raíz cuadrada.
 
 \begin{figure}[H]
     \centering
@@ -344,7 +333,6 @@ La transformación Box-Cox \cite{boxcox1964} elige automáticamente el exponente
 
 Ajusté un SARIMA sobre la serie transformada y el RMSE en validación fue de 264, peor que el modelo directo (186). La transformación no ayuda porque el problema no era heterocedasticidad sino tendencia, que ya maneja el SARIMA con sus componentes AR.
 
-\newpage
 \section{Resultados y Conclusiones}
 
 \begin{table}[H]
@@ -377,36 +365,5 @@ Las principales conclusiones de la práctica son:
 \subsection*{Trabajo futuro}
 
 Para la serie B, una línea interesante sería usar el \textbf{HistGradientBoosting} como modelo principal. Los resultados en validación sugieren que los lags anuales combinados con features de calendario pueden capturar mejor las interacciones no lineales entre el día de la semana, el mes y el nivel del año anterior. Con una validación rolling sobre varios años y una búsqueda de hiperparámetros más exhaustiva, podría mejorar sustancialmente el RMSE.
-
-\newpage
-\begin{thebibliography}{9}
-
-\bibitem{boxcox1964}
-Box, G. E. P.\ \& Cox, D. R.\ (1964).
-\textit{An analysis of transformations}.
-Journal of the Royal Statistical Society B, \textbf{26}(2), 211--252.
-
-\bibitem{engle1982}
-Engle, R. F.\ (1982).
-\textit{Autoregressive conditional heteroscedasticity with estimates of the variance of United Kingdom inflation}.
-Econometrica, \textbf{50}(4), 987--1007.
-
-\bibitem{bollerslev1986}
-Bollerslev, T.\ (1986).
-\textit{Generalized autoregressive conditional heteroscedasticity}.
-Journal of Econometrics, \textbf{31}(3), 307--327.
-
-\bibitem{hyndman2021}
-Hyndman, R. J.\ \& Athanasopoulos, G.\ (2021).
-\textit{Forecasting: Principles and Practice}, 3rd ed.\ OTexts.
-\url{https://otexts.com/fpp3/}
-
-\bibitem{levene1960}
-Levene, H.\ (1960).
-\textit{Robust tests for equality of variances}.
-In Olkin, I.\ et al.\ (Eds.), \textit{Contributions to Probability and Statistics}, pp.\ 278--292.
-Stanford University Press.
-
-\end{thebibliography}
 
 \end{document}

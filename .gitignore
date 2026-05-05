@@ -24,5 +24,11 @@ test_serie*.csv
 # OS
 .DS_Store
 
+# LaTeX auxiliaries
+*.aux
+*.log
+*.out
+*.toc
+
 # Claude Code
 .claude/

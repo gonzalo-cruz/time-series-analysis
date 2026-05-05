@@ -2,15 +2,10 @@
 Serie B – Nacimientos diarios
 Predice todos los dias de 2003 (B1-B365).
 
-Modelo: SARIMA(2,0,1)(1,1,1,7) con terminos de Fourier anuales (K=5) como regresores
-externos. m=7 captura la estacionalidad semanal (pocos nacimientos en fin de semana).
-Para la estacionalidad anual usamos 5 pares seno/coseno calculados a partir del dia
-del año. Estos terminos de Fourier se construyen exclusivamente con el indice de fecha,
-sin mirar la serie, asi que no hay fuga de informacion al calcularlos para 2003.
-
-Fourier anual: para cada frecuencia k=1..K se añaden sin(2*pi*k*t) y cos(2*pi*k*t)
-donde t = dia_del_año / 365.25. Con K=5 tenemos 10 regresores que cubren los primeros
-cinco armonicos de la estacionalidad anual.
+Búsqueda en dos fases:
+  Fase 1: grid completo (GRID_SMALL) con K=3 Fourier, ventana 4 años.
+  Fase 2: top-5 estructuras × K∈{3,4,5} × ventanas {4y, all} → elige la mejor combinación.
+m=7 captura la estacionalidad semanal; Fourier captura la anual sin fuga de datos.
 """
 
 import warnings
@@ -24,36 +19,33 @@ import matplotlib.pyplot as plt
 import gc
 import os
 from statsmodels.tsa.seasonal import seasonal_decompose
-from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.graphics.tsaplots import plot_acf
 from statsmodels.stats.diagnostic import acorr_ljungbox
 from scipy import stats
 
-from helpers import DATA_DIR, FIG_DIR, adf_test, plot_series, plot_acf_pacf, rmse, save_predictions
+from helpers import (DATA_DIR, FIG_DIR, adf_test, plot_series, plot_acf_pacf,
+                     rmse, save_predictions, fit_safe, run_grid, fourier_annual, GRID_SMALL)
 
 print("\n" + "="*60)
 print("SERIE B – Nacimientos diarios")
 print("="*60)
 
-# Cargar y estructurar datos de entrenamiento
 df_B = pd.read_csv(os.path.join(DATA_DIR, "train_series_B.csv"))
 df_B["Date"] = pd.to_datetime(df_B[["year", "month", "day"]])
 df_B = df_B.sort_values("Date").set_index("Date")
 serie_B = df_B["births"].astype(float)
 
-# Cargar datos de prueba para 2003
 test_B = pd.read_csv(os.path.join(DATA_DIR, "test_serie_B.csv"))
 test_B["Date"] = pd.to_datetime(test_B[["year", "month", "day"]])
+pred_dates_B = pd.DatetimeIndex(test_B["Date"].values)
 n_pred_B = len(test_B)
 
 print(f"  Training: {serie_B.index[0].date()} -> {serie_B.index[-1].date()} ({len(serie_B)} obs)")
 print(f"  Predicciones requeridas: {n_pred_B} (año 2003)")
 
-# Visualizar serie de nacimientos diarios
 plot_series(serie_B, "Serie B – Nacimientos diarios", "Fecha", "Nacimientos",
             path=os.path.join(FIG_DIR, "B_serie.png"))
 
-# Usar últimos 3 años para descomposición (para claridad visual)
 work_B = serie_B.iloc[-1095:]
 decomp_B = seasonal_decompose(work_B, model="additive", period=7)
 fig, axes = plt.subplots(4, 1, figsize=(12, 9))
@@ -70,49 +62,73 @@ plt.close()
 del decomp_B, work_B
 gc.collect()
 
-# Pruebas de estacionariedad y gráficos ACF/PACF
 adf_test(serie_B, "Serie B")
 plot_acf_pacf(serie_B, lags=30, title="Serie B",
               path=os.path.join(FIG_DIR, "B_acf_pacf.png"))
 
+windows_B = {
+    "4y": serie_B[serie_B.index.year >= 1999],
+    "all": serie_B,
+}
 
-def fourier_annual(idx, K):
-    """Regresores de Fourier anuales: K pares sin/cos, t = dia_del_año/365.25."""
-    t = idx.dayofyear / 365.25
-    cols = {}
-    for k in range(1, K + 1):
-        cols[f"sin{k}"] = np.sin(2 * np.pi * k * t)
-        cols[f"cos{k}"] = np.cos(2 * np.pi * k * t)
-    return pd.DataFrame(cols, index=idx).values
+# Fase 1: grid completo con K=3, ventana 4y
+w4 = windows_B["4y"]
+tr1 = w4[w4.index.year < 2002]
+va1 = w4[w4.index.year == 2002]
+print(f"\n  Fase 1: {len(GRID_SMALL)} modelos con K=3, ventana 4y...")
+K3_tr, K3_va = fourier_annual(tr1.index, 3), fourier_annual(va1.index, 3)
+df_B1 = run_grid(tr1, va1.values, GRID_SMALL, 7, len(va1),
+                 exog_tr=K3_tr, exog_fc=K3_va, tag="B-f1")
 
-# Split: entrenar 1994-2001, validar 2002
-train_B = serie_B[serie_B.index.year < 2002]
-val_B   = serie_B[serie_B.index.year == 2002]
+print(f"\n  Top 10 Fase 1:")
+print(df_B1.head(10).to_string())
 
-# Crear regresores de Fourier para ambos conjuntos
-K = 5
-exog_tr = fourier_annual(train_B.index, K)
-exog_va = fourier_annual(val_B.index, K)
+top_structs = [tuple(df_B1.iloc[i][["p", "d", "q", "P", "D", "Q"]].astype(int))
+               for i in range(min(5, len(df_B1)))]
+del tr1, va1, K3_tr, K3_va
+gc.collect()
 
-print(f"\n  Ajustando SARIMA(2,0,1)(1,1,1,7)+Fourier K={K} sobre {len(train_B)} obs...")
-fit_B_val = SARIMAX(
-    train_B,
-    exog=exog_tr,
-    order=(2, 0, 1),
-    seasonal_order=(1, 1, 1, 7),
-    trend="c",
-    enforce_stationarity=False,
-    enforce_invertibility=False,
-).fit(disp=False, maxiter=100)
+# Fase 2: top-5 estructuras × K∈{3,4,5} × ventanas {4y, all}
+print(f"\n  Fase 2: {len(top_structs)} estructuras × K=3,4,5 × 2 ventanas ({len(top_structs)*3*2} fits)...")
+all_B2 = []
+for wname, wdata in windows_B.items():
+    tr_w = wdata[wdata.index.year < 2002]
+    va_w = wdata[wdata.index.year == 2002]
+    for K in [3, 4, 5]:
+        exog_tr_w = fourier_annual(tr_w.index, K)
+        exog_va_w = fourier_annual(va_w.index, K)
+        for (p, d, q, P, D, Q) in top_structs:
+            pred, _ = fit_safe(tr_w, (p, d, q), (P, D, Q, 7), len(va_w),
+                               exog_tr=exog_tr_w, exog_fc=exog_va_w)
+            if pred is None:
+                continue
+            all_B2.append(dict(p=p, d=d, q=q, P=P, D=D, Q=Q, K=K, window=wname,
+                               rmse=rmse(va_w.values, pred)))
+    del tr_w, va_w
+    gc.collect()
 
-# Predicciones de validación
-pred_val_B = fit_B_val.get_forecast(len(val_B), exog=exog_va).predicted_mean.values
-rmse_val_B = rmse(val_B.values, pred_val_B)
-print(f"  Validacion (2002) -> RMSE={rmse_val_B:.2f}")
+df_B2 = pd.DataFrame(all_B2).sort_values("rmse").reset_index(drop=True)
+print(f"\n  Top 10 Fase 2:")
+print(df_B2[["p", "d", "q", "P", "D", "Q", "K", "window", "rmse"]].head(10).to_string())
 
-# Verificar que residuos sean ruido blanco
+best_B = df_B2.iloc[0]
+p, d, q = int(best_B.p), int(best_B.d), int(best_B.q)
+P, D, Q = int(best_B.P), int(best_B.D), int(best_B.Q)
+K_best, w_best = int(best_B.K), best_B.window
+lbl_B = f"SARIMA({p},{d},{q})({P},{D},{Q},7)+F{K_best}[{w_best}]"
+rmse_val_B = best_B.rmse
+print(f"\n  Mejor modelo: {lbl_B}  RMSE={rmse_val_B:.2f}")
+
+# Residuos sobre la ventana ganadora
+wdata_b = windows_B[w_best]
+tr_b = wdata_b[wdata_b.index.year < 2002]
+va_b = wdata_b[wdata_b.index.year == 2002]
+_, fit_B_val = fit_safe(tr_b, (p, d, q), (P, D, Q, 7), len(va_b),
+                        exog_tr=fourier_annual(tr_b.index, K_best),
+                        exog_fc=fourier_annual(va_b.index, K_best))
+
 resid_B = fit_B_val.resid.dropna()
-resid_plot = resid_B.iloc[-500:]  # Mostrar últimos 500 para claridad
+resid_plot = resid_B.iloc[-500:]
 fig, axes = plt.subplots(2, 2, figsize=(12, 7))
 axes[0, 0].plot(resid_plot.values, lw=0.5, color="steelblue")
 axes[0, 0].axhline(0, color="r", lw=0.8, ls="--")
@@ -125,54 +141,38 @@ plot_acf(resid_B, lags=30, ax=axes[1, 0], title="ACF residuos")
 axes[1, 1].axis("off")
 lb = acorr_ljungbox(resid_B, lags=[7, 14, 21], return_df=True)
 txt = "Ljung-Box:\n"
-for lag, row in lb.iterrows():
-    ok = "ok" if row["lb_pvalue"] > 0.05 else "FALLA"
-    txt += f"  lag={int(lag):2d}  p={row['lb_pvalue']:.4f} {ok}\n"
+for lag, row_lb in lb.iterrows():
+    ok = "ok" if row_lb["lb_pvalue"] > 0.05 else "FALLA"
+    txt += f"  lag={int(lag):2d}  p={row_lb['lb_pvalue']:.4f} {ok}\n"
 jb, jp = stats.jarque_bera(resid_B)
 txt += f"\nJarque-Bera p={jp:.4f} {'ok' if jp > 0.05 else 'FALLA'}"
 axes[1, 1].text(0.05, 0.95, txt, transform=axes[1, 1].transAxes, va="top",
                 fontsize=9, fontfamily="monospace",
                 bbox=dict(boxstyle="round", facecolor="lightyellow", alpha=0.9))
-plt.suptitle(f"Residuos – SARIMA(2,0,1)(1,1,1,7)+F{K} – Serie B", fontsize=12, fontweight="bold")
+plt.suptitle(f"Residuos – {lbl_B} – Serie B", fontsize=12, fontweight="bold")
 plt.tight_layout()
 plt.savefig(os.path.join(FIG_DIR, "B_residuos.png"), dpi=100, bbox_inches="tight")
 plt.close()
-del fit_B_val, train_B, val_B
+del fit_B_val, tr_b, va_b
 gc.collect()
 
-del fit_B_val, train_B, val_B
-gc.collect()
-
-# Reentrenar con TODOS los datos para mejores estimaciones en 2003
+# Reentrenar con todos los datos históricos
 print(f"\n  Refitting sobre {len(serie_B)} obs...")
-exog_all  = fourier_annual(serie_B.index, K)  # Fourier para todo el histórico
-pred_dates_B = pd.DatetimeIndex(test_B["Date"].values)
-exog_test = fourier_annual(pred_dates_B, K)  # Fourier para fechas de predicción
-
-fit_B_full = SARIMAX(
-    serie_B,
-    exog=exog_all,
-    order=(2, 0, 1),
-    seasonal_order=(1, 1, 1, 7),
-    trend="c",
-    enforce_stationarity=False,
-    enforce_invertibility=False,
-).fit(disp=False, maxiter=100)
-
-# Generar predicciones para 2003
-pred_B = fit_B_full.get_forecast(n_pred_B, exog=exog_test).predicted_mean.values
+exog_all  = fourier_annual(serie_B.index, K_best)
+exog_test = fourier_annual(pred_dates_B, K_best)
+pred_B, _ = fit_safe(serie_B, (p, d, q), (P, D, Q, 7), n_pred_B,
+                     exog_tr=exog_all, exog_fc=exog_test)
 print(f"  Predicciones B: min={pred_B.min():.0f}, max={pred_B.max():.0f}, media={pred_B.mean():.0f}")
 
 fig, ax = plt.subplots(figsize=(12, 4))
 ax.plot(serie_B[-180:], label="Historico (ultimos 180 dias)", linewidth=0.7)
 ax.plot(pred_dates_B, pred_B, "r-",
-        label=f"SARIMA(2,0,1)(1,1,1,7)+F{K}  RMSE val={rmse_val_B:.0f}", linewidth=0.9)
-ax.set_title(f"Serie B – Predicciones 2003 (SARIMA+Fourier K={K})")
+        label=f"{lbl_B}  RMSE val={rmse_val_B:.0f}", linewidth=0.9)
+ax.set_title(f"Serie B – Predicciones 2003 ({lbl_B})")
 ax.legend(); ax.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.savefig(os.path.join(FIG_DIR, "B_predicciones.png"), dpi=100)
 plt.close()
-del fit_B_full
 gc.collect()
 
 save_predictions([f"B{i}" for i in range(1, n_pred_B + 1)], pred_B,
