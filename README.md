@@ -1,77 +1,78 @@
-# Práctica Final — Análisis y Predicción de Series Temporales
-**Competición Kaggle · Universidad Rey Juan Carlos (URJC)** https://www.kaggle.com/competitions/analisis-de-series-temporales
+# Time Series Analysis & Forecasting
 
-## Descripción
+**Kaggle Competition · Universidad Rey Juan Carlos (URJC)**
 
-Predicción de cuatro series temporales con distinta frecuencia y naturaleza. Para cada serie se realiza análisis exploratorio, tests de estacionariedad, selección del modelo por RMSE en validación y predicción final reajustada sobre todos los datos.
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
+![statsmodels](https://img.shields.io/badge/statsmodels-SARIMA%2FSARIMAX-4EABE0)
+![pandas](https://img.shields.io/badge/pandas-data%20wrangling-150458?logo=pandas&logoColor=white)
+![matplotlib](https://img.shields.io/badge/matplotlib-visualization-11557C)
+![LaTeX](https://img.shields.io/badge/LaTeX-report-008080?logo=latex&logoColor=white)
 
-El informe completo se encuentra en `informe.pdf`.
+Forecasting four time series of different frequency and nature using SARIMA/SARIMAX models. Each series script runs a full grid search to select the best model by validation RMSE, then refits on all available data.
 
 ## Series
 
-| Serie | Variable | Frecuencia | Obs. train | Predicciones |
-|-------|----------|------------|------------|--------------|
-| A | Precio bursátil | Diaria (días hábiles) | 2025 | 10 días |
-| B | Nacimientos diarios | Diaria | 3287 | 365 días (año 2003) |
-| C | Temperatura global (°C) | Mensual | 1740 | 12 meses (2025) |
-| D | Serie mensual | Mensual | 132 | 10 meses (Ene–Oct 1991) |
+| Series | Variable | Frequency | Train obs. | Forecast horizon |
+|--------|----------|-----------|------------|-----------------|
+| A | Stock price | Daily (business days) | 2025 | 10 days |
+| B | Daily births | Daily | 3287 | 365 days (year 2003) |
+| C | Global temperature (°C) | Monthly | 1740 | 12 months (2025) |
+| D | Monthly series | Monthly | 132 | 10 months (Jan–Oct 1991) |
 
-## Modelos seleccionados
+## Results
 
-| Serie | Modelo (submission) | RMSE val. |
-|-------|---------------------|-----------|
-| A | SARIMA(2,0,1)(1,1,1,5) | 6.16 |
-| B | SARIMA(2,0,1)(1,1,1,7) + Fourier K=5 | 710.10 |
-| C | SARIMA(1,0,0)(0,1,1,12) + tendencia lineal (últimos 40 años) | 0.287 |
-| D | SARIMA(0,0,0)(1,0,0,12) | 186.24 |
+| Series | Best model | Val. RMSE |
+|--------|-----------|-----------|
+| A | SARIMA(2,0,1)(1,1,1)<sub>5</sub> | 6.16 |
+| B | SARIMA(2,0,1)(1,1,1)<sub>7</sub> + Fourier K=5 | 710.10 |
+| C | SARIMA(1,0,0)(0,1,1)<sub>12</sub> + linear trend (last 40y) | 0.287 |
+| D | SARIMA(0,0,0)(1,0,0)<sub>12</sub> | 186.24 |
 
-## Estructura
+Kaggle score: **0.78** (1st place on the leaderboard).
+
+## Project structure
 
 ```
 .
-├── main.py                      # Ejecuta todas las series y genera submission.csv
-├── serie_a.py                   # Serie A — precios bursátiles (Holt 252d)
-├── serie_b.py                   # Serie B — nacimientos diarios (HistGBM)
-├── serie_c.py                   # Serie C — temperatura global (STL+ETS 40y)
-├── serie_d.py                   # Serie D — serie mensual (ETS(A,A,A))
-├── helpers.py                   # Funciones auxiliares (ADF, plots, RMSE, guardado)
-├── investigacion_adicional.py   # Experimentos y modelos alternativos explorados
-├── validar_gbm_ridge.py         # Validación rolling GBM (B) y Ridge (C)
-├── train_series_A/B/C/D.csv     # Datos de entrenamiento
-├── test_serie_A/B/C/D.csv       # Períodos a predecir
-├── pred_A/B/C/D.csv             # Predicciones por serie (generados)
-├── submission.csv               # Fichero final de entrega (generado)
-├── figures/                     # Gráficos generados
-├── informe.tex                  # Informe en LaTeX
-└── informe.pdf                  # Informe compilado
+├── main.py          # Runs all series and combines predictions into submission.csv
+├── serie_a.py       # Series A — grid search SARIMA, m=5
+├── serie_b.py       # Series B — two-phase grid search SARIMA + Fourier, m=7
+├── serie_c.py       # Series C — grid search SARIMA + optional trend, m=12
+├── serie_d.py       # Series D — grid search SARIMA, m=12
+├── helpers.py       # Shared utilities: ADF test, plots, RMSE, grid search functions
+├── sarimax_v2.py    # Standalone research script (grid search across all series)
+├── informe.tex      # Full report (LaTeX)
+└── informe.pdf      # Compiled report
 ```
 
-## Uso
+> Train/test data files are not tracked. Place `train_series_A/B/C/D.csv` and `test_serie_A/B/C/D.csv` in the project root before running.
+
+## Usage
 
 ```bash
-# Ejecutar todas las series y generar submission.csv
+# Run all series and generate submission.csv
 python3 main.py
 
-# Ejecutar solo una serie
+# Run a single series
 python3 main.py --only B   # A | B | C | D
 
-# Solo combinar pred_*.csv ya existentes
+# Combine existing pred_*.csv without rerunning
 python3 main.py --combine
 ```
 
-Cada serie se ejecuta como subproceso independiente para evitar acumulación de memoria. Si `pred_X.csv` ya existe, esa serie se omite automáticamente.
+Each series runs as an independent subprocess to avoid memory buildup. If `pred_X.csv` already exists, that series is skipped automatically.
 
-## Dependencias
+## Dependencies
 
 ```bash
-pip install pandas numpy matplotlib statsmodels pmdarima scikit-learn prophet
+pip install pandas numpy matplotlib statsmodels scikit-learn
 ```
 
-Versión de Python: 3.10+. Se requiere `pdflatex` para recompilar el informe.
+Python 3.10+. `pdflatex` required to recompile the report.
 
-## Notas metodológicas
+## Methodology notes
 
-- **Serie A**: SARIMA(2,0,1)(1,1,1,5) con m=5 días laborables. d=0, D=1.
-- **Serie B**: SARIMA(2,0,1)(1,1,1,7) con términos de Fourier anuales K=5 como regresores externos. m=7 captura la estacionalidad semanal; el Fourier captura la anual sin fuga de datos.
-- **Serie C**: SARIMA(1,0,0)(0,1,1,12) con regresor de tendencia lineal, entrenado solo sobre los últimos 40 años (1985-2024). Los datos de 1880 distorsionan la predicción porque la tasa de calentamiento reciente es muy distinta.
-- **Serie D**: SARIMA(0,0,0)(1,0,0,12): modelo AR estacional puro, el más simple y el mejor en validación.
+- **Series A**: Grid search over SARIMA with m=5 (business week). D=1 handles seasonal stationarity.
+- **Series B**: Two-phase search — Phase 1: full grid with K=3 Fourier terms over a 4-year window; Phase 2: top-5 structures × K∈{3,4,5} × windows {4y, all}. Fourier terms capture annual seasonality without data leakage.
+- **Series C**: Grid search on the last 40 years (1985–2024) only — earlier data distorts predictions due to the different warming rate in the 19th century. Top-5 models also tested with a linear trend exogenous regressor.
+- **Series D**: Grid search with m=12. The simplest seasonal AR model generalised best with only 132 observations.
