@@ -25,8 +25,6 @@ El informe completo se encuentra en `informe.pdf`.
 | C | SARIMA(1,0,0)(0,1,1,12) + tendencia lineal (últimos 40 años) | 0.287 |
 | D | SARIMA(0,0,0)(1,0,0,12) | 186.24 |
 
-Puntuación Kaggle: **0.78** (primer puesto del leaderboard).
-
 ## Estructura
 
 ```
