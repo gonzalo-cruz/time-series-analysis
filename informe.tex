@@ -29,7 +29,7 @@
 \maketitle
 \section{Introducción}
 
-El objetivo de esta práctica es predecir cuatro series temporales de naturaleza muy diferente para la competición Kaggle de la asignatura. Para cada una se ha seguido el mismo proceso: análisis exploratorio, test de estacionariedad, selección del modelo por RMSE en validación y predicción final reajustando sobre todos los datos disponibles.
+El objetivo de esta práctica es predecir cuatro series temporales diferentes para la asignatura de análisis de series temporales. Para cada una se ha seguido el mismo proceso: análisis exploratorio, test de estacionariedad, selección del modelo por RMSE en validación y predicción final reajustando sobre todos los datos disponibles.
 
 El enfoque utilizado en todas las series es SARIMA/SARIMAX (Seasonal AutoRegressive Integrated Moving Average with eXogenous regressors). Para la serie B, que presenta doble estacionalidad (semanal y anual), se combina SARIMA con términos de Fourier anuales como regresores externos. En la serie C se añade también un regresor de tendencia lineal.
 
@@ -44,10 +44,10 @@ Las herramientas usadas son Python 3.10 con \texttt{pandas}, \texttt{statsmodels
 \toprule
 \textbf{Serie} & \textbf{Variable} & \textbf{Frecuencia} & \textbf{Obs. train} & \textbf{Período train} & \textbf{Preds.} \\
 \midrule
-A & Precio bursátil     & Diaria (lab.) & 2025 & 2010--2018 & 10 \\
-B & Nacimientos diarios & Diaria        & 3287 & 1994--2002 & 365 \\
-C & Temp. global (°C)   & Mensual       & 1740 & 1880--2024 & 12 \\
-D & Serie mensual       & Mensual       & 132  & 1980--1990 & 10 \\
+A & Precio bursátil     & Diaria (lab.) & 2025 & 2010-2018 & 10 \\
+B & Nacimientos diarios & Diaria        & 3287 & 1994-2002 & 365 \\
+C & Temp. global (°C)   & Mensual       & 1740 & 1880-2024 & 12 \\
+D & Serie mensual       & Mensual       & 132  & 1980-1990 & 10 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -61,7 +61,7 @@ La serie A contiene 2025 observaciones de precios bursátiles en días laborable
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/A_serie.png}
-    \caption{Serie A: precios bursátiles diarios (2010--2018)}
+    \caption{Serie A: precios bursátiles diarios (2010-2018)}
 \end{figure}
 
 \begin{figure}[H]
@@ -72,7 +72,7 @@ La serie A contiene 2025 observaciones de precios bursátiles en días laborable
 
 \subsection{Estacionariedad}
 
-El test ADF en niveles da $p=0.74$, así que la serie no es estacionaria. Con la primera diferencia cae a $p<0.0001$, lo que confirma integración de orden 1. El ACF y PACF de la serie diferenciada no muestran autocorrelaciones relevantes, lo que es coherente con un precio que sigue aproximadamente un paseo aleatorio.
+El test ADF da $p=0.74$, así que la serie no es estacionaria. Con la primera diferencia cae a $p<0.0001$, lo que confirma integración de orden 1. El ACF y PACF de la serie diferenciada no muestran autocorrelaciones relevantes, lo que es coherente con un precio que sigue aproximadamente un paseo aleatorio.
 
 \begin{figure}[H]
     \centering
@@ -105,7 +105,7 @@ SARIMA$(0,0,2)(1,0,0)_5$           & 6.26 & 11746.16 \\
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/A_residuos.png}
-    \caption{Análisis de residuos -- SARIMA$(2,0,1)(1,1,1)_5$ -- Serie A}
+    \caption{Análisis de residuos - SARIMA$(2,0,1)(1,1,1)_5$ - Serie A}
 \end{figure}
 
 \subsection{Predicciones}
@@ -120,12 +120,12 @@ SARIMA$(0,0,2)(1,0,0)_5$           & 6.26 & 11746.16 \\
 
 \subsection{Análisis exploratorio}
 
-La serie B contiene 3287 observaciones diarias de nacimientos (1994-2002). Tiene dos estacionalidades claramente visibles: una semanal muy marcada (pocos nacimientos en fin de semana, las cesáreas programadas se concentran entre semana) y una anual (pico en agosto-septiembre, mínimo en enero, diferencia de unos 1000 nacimientos/día).
+La serie B contiene 3287 observaciones diarias de nacimientos (1994-2002). Tiene dos estacionalidades claramente visibles: una semanal muy marcada (pocos nacimientos en fin de semana) y una anual (pico en agosto-septiembre, mínimo en enero, diferencia de unos 1000 nacimientos/día).
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/B_serie.png}
-    \caption{Serie B: nacimientos diarios (1994--2002)}
+    \caption{Serie B: nacimientos diarios (1994-2002)}
 \end{figure}
 
 \begin{figure}[H]
@@ -142,7 +142,7 @@ Para resolver esto se añaden como regresores externos \textbf{términos de Four
 \[
 \sin\!\left(\frac{2\pi k\, t}{365.25}\right), \quad \cos\!\left(\frac{2\pi k\, t}{365.25}\right), \quad k = 1, \ldots, K
 \]
-donde $t$ es el día del año (1--365). Con $K=5$ se tienen 10 regresores que representan los primeros cinco armónicos de la variación anual. La ventaja de este enfoque es que estos regresores se calculan únicamente a partir del índice de fecha, sin usar los valores de la serie, así que no hay fuga de información al construirlos para 2003. El modelo SARIMAX con $m=7$ y Fourier $K=5$ separa entonces las dos fuentes de variación: el componente estocástico semanal (manejado por el SARIMA) y el patrón anual determinista (manejado por el Fourier).
+donde $t$ es el día del año (1--365). Con $K=5$ se tienen 10 regresores que representan la variación anual. La ventaja de esto es que estos regresores se calculan únicamente a partir del índice de fecha, sin usar los valores de la serie, así que no hay fuga de información al construirlos para validación. El modelo SARIMAX con $m=7$ y Fourier $K=5$ separa entonces las dos fuentes de variación: el componente aleatorio semanal (manejado por el SARIMA) y el patrón anual determinista (manejado por el Fourier).
 
 \subsubsection*{Selección del modelo}
 
@@ -167,7 +167,7 @@ SARIMA$(1,0,2)(1,1,1)_7$          & 5 & all & 712.63 \\
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/B_residuos.png}
-    \caption{Análisis de residuos - SARIMA$(2,0,1)(1,1,1)_7$ + Fourier $K=5$ -- Serie B}
+    \caption{Análisis de residuos - SARIMA$(2,0,1)(1,1,1)_7$ + Fourier $K=5$ - Serie B}
 \end{figure}
 
 \subsection{Predicciones}
@@ -202,9 +202,9 @@ El ADF en niveles da $p=0.97$ (no estacionaria). Con diferenciación estacional 
 
 \subsection{Selección del modelo}
 
-Se entrenó sobre los \textbf{últimos 40 años} (1985--2024, 480 observaciones) en vez de usar la serie completa desde 1880. La razón es que la tendencia de calentamiento reciente es mucho más pronunciada que la de finales del siglo XIX y principios del XX: los datos antiguos tienen una pendiente muy diferente a la actual y distorsionan las predicciones a corto plazo.
+Se entrenó sobre los \textbf{últimos 40 años} (1985-2024, 480 observaciones) en vez de usar la serie completa desde 1880. La razón es que la tendencia de calentamiento reciente es mucho más pronunciada que la de finales del siglo XIX y principios del XX: los datos antiguos tienen una pendiente muy diferente a la actual y distorsionan las predicciones a corto plazo.
 
-El mejor modelo fue \textbf{SARIMA$(1,0,0)(0,1,1)_{12}$} con un \textbf{regresor de tendencia lineal} (RMSE$=0.287$ en validación, últimos 24 meses). La tendencia lineal exógena modela el calentamiento global continuo de forma explícita; la diferenciación estacional $D=1$ elimina el patrón mensual.
+El mejor modelo fue \textbf{SARIMA$(1,0,0)(0,1,1)_{12}$} con un \textbf{regresor de tendencia lineal} (RMSE$=0.287$ en validación, últimos 24 meses). La tendencia lineal exógena modela el calentamiento global continuo de forma explícita y la diferenciación estacional $D=1$ elimina el patrón mensual.
 
 \begin{table}[H]
 \centering
@@ -225,7 +225,7 @@ SARIMA$(0,0,1)(0,1,1)_{12}$                       & 40 años & 0.2895 \\
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/C_residuos.png}
-    \caption{Análisis de residuos - SARIMA$(1,0,0)(0,1,1)_{12}$ + tendencia -- Serie C}
+    \caption{Análisis de residuos - SARIMA$(1,0,0)(0,1,1)_{12}$ + tendencia - Serie C}
 \end{figure}
 
 \subsection{Predicciones}
@@ -240,12 +240,12 @@ SARIMA$(0,0,1)(0,1,1)_{12}$                       & 40 años & 0.2895 \\
 
 \subsection{Análisis exploratorio}
 
-La serie D tiene 132 observaciones mensuales (1980--1990). Los valores crecen de forma sostenida (de $\approx 464$ a $\approx 2286$) con una estacionalidad anual clara. Probablemente son datos de consumo (gas o electricidad).
+La serie D tiene 132 observaciones mensuales (1980-1990). Los valores crecen de forma sostenida (de $\approx 464$ a $\approx 2286$) con una estacionalidad anual clara.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/D_serie.png}
-    \caption{Serie D: serie mensual (1980--1990)}
+    \caption{Serie D: serie mensual (1980-1990)}
 \end{figure}
 
 \begin{figure}[H]
@@ -298,11 +298,11 @@ SARIMA$(0,0,0)(0,1,1)_{12}$          & 193.98 & 1283.23 \\
 
 Además del análisis principal, exploré algunas cuestiones adicionales que aparecieron durante el trabajo.
 
-\subsection{Serie A -- Heterocedasticidad y log-retornos}
+\subsection{Serie A - Heterocedasticidad y log-retornos}
 
 La serie de precios es heterocedástica: cuando el precio es alto, también lo son las oscilaciones diarias. Aplicando el test de Levene dividiendo la serie en 4 bloques, el p-valor es prácticamente cero.
 
-En finanzas lo habitual es trabajar con \textbf{log-retornos} ($r_t = \log P_t - \log P_{t-1}$), que son estacionarios y mucho más homocedásticos. Ajusté un ARIMA sobre los retornos y luego revertí la transformación para obtener precios. El modelo resultante fue ARIMA$(0,0,0)$ (ruido blanco), coherente con la hipótesis de eficiencia del mercado.
+En finanzas muchas veces se  trabaja con \textbf{log-retornos} ($r_t = \log P_t - \log P_{t-1}$), que son estacionarios y mucho más homocedásticos. Ajusté un ARIMA sobre los retornos y luego deshice la transformación para obtener precios. El modelo resultante fue ARIMA$(0,0,0)$ (ruido blanco), lo cual tiene sentido teniendo en cuenta lo impredecible que es el mercado.
 
 \begin{figure}[H]
     \centering
@@ -353,13 +353,13 @@ Las principales conclusiones de la práctica son:
 
     \item \textbf{Serie B}: La doble estacionalidad se puede manejar combinando SARIMA (para la componente semanal) con términos de Fourier como regresores externos (para la componente anual). El uso de Fourier es especialmente útil cuando la serie tiene dos frecuencias estacionales que no pueden capturarse con un solo periodo $m$.
 
-    \item \textbf{Serie C}: Limitar los datos de entrenamiento a los últimos 40 años es una decisión importante: los datos de 1880--1984 tienen una pendiente de calentamiento muy diferente a la actual y añadir un regresor de tendencia lineal junto con la ventana temporal adecuada mejora sustancialmente las predicciones.
+    \item \textbf{Serie C}: Limitar los datos de entrenamiento a los últimos 40 años es una decisión importante: los datos de 1880-1984 tienen una pendiente de calentamiento muy diferente a la actual y añadir un regresor de tendencia lineal junto con la ventana temporal adecuada mejora sustancialmente las predicciones.
 
     \item \textbf{Serie D}: Con solo 132 observaciones, los modelos simples generalizan mejor. SARIMA$(0,0,0)(1,0,0)_{12}$ con un único parámetro estacional fue el más robusto en validación.
 \end{itemize}
 
 \subsection*{Trabajo futuro}
 
-Para la serie B, una línea interesante sería usar el \textbf{HistGradientBoosting} como modelo principal. Los resultados en validación sugieren que los lags anuales combinados con features de calendario pueden capturar mejor las interacciones no lineales entre el día de la semana, el mes y el nivel del año anterior. Con una validación rolling sobre varios años y una búsqueda de hiperparámetros más exhaustiva, podría mejorar sustancialmente el RMSE.
+Para la serie B, una línea interesante sería usar \textbf{Gradient Boosting} como modelo principal. Los resultados en validación nos sugieren que el modelo puede no estar capturando las no linealidades de manera correcta. Utilizando dicho modelo y haciendo una búsqueda de hiperparametros correcta podríamos mejorar dicha predicción. Asimismo, podríamos utilizar datos generados para dotar a los modelos de un mayor número de observaciones, lo que podría mejorar su capacidad de generalización.
 
 \end{document}

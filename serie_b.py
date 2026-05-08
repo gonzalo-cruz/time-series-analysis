@@ -4,7 +4,7 @@ Predice todos los dias de 2003 (B1-B365).
 
 Búsqueda en dos fases:
   Fase 1: grid completo (GRID_SMALL) con K=3 Fourier, ventana 4 años.
-  Fase 2: top-5 estructuras × K∈{3,4,5} × ventanas {4y, all} → elige la mejor combinación.
+  Fase 2: top-5 estructuras × K∈{3,4,5} × ventanas {4y, all} -> elige la mejor combinación.
 m=7 captura la estacionalidad semanal; Fourier captura la anual sin fuga de datos.
 """
 
